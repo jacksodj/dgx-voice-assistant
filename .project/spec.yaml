@@ -3,43 +3,52 @@ specMinorVersion: 2
 meta:
   name: dgx-voice-assistant
   image: project-dgx-voice-assistant
-  description: Production-ready voice assistant powered by Qwen3-Omni-30B with internet search and persistent storage
-  labels:
-    - llm
-    - voice-assistant
-    - qwen3
-    - vllm
+  description: Production-ready voice assistant powered by Qwen3-Omni-30B
+  labels: []
   createdOn: "2025-11-10T00:00:00Z"
   defaultBranch: main
 layout:
-  - path: code/
-    type: code
-    storage: git
-  - path: backend/
-    type: code
-    storage: git
-  - path: data/
-    type: data
-    storage: gitignore
+- path: code/
+  type: code
+  storage: git
+- path: backend/
+  type: code
+  storage: git
+- path: data/
+  type: data
+  storage: gitignore
 environment:
   base:
-    registry: docker.io
-    image: vllm/vllm-openai:latest
+    registry: nvcr.io
+    image: nvidia/pytorch:24.09-py3
     build_timestamp: "20241110000000"
-    name: vLLM OpenAI
-    supported_architectures:
-      - amd64
-      - arm64
+    name: PyTorch
+    supported_architectures: []
     cuda_version: "12.2"
-    description: vLLM inference server with OpenAI API compatibility
+    description: PyTorch base environment with CUDA 12.2
     entrypoint_script: ""
     labels:
-      - vllm
-      - cuda12
-      - python3
-    apps: []
+    - cuda12.2
+    - pytorch
+    apps:
+    - name: jupyterlab
+      type: jupyterlab
+      class: webapp
+      start_command: jupyter lab --allow-root --port 8888 --ip 0.0.0.0 --no-browser --NotebookApp.base_url=\$PROXY_PREFIX --NotebookApp.default_url=/lab --NotebookApp.allow_origin='*'
+      health_check_command: '[ \$(echo url=\$(jupyter lab list | head -n 2 | tail -n 1 | cut -f1 -d'' '' | grep -v ''Currently'' | sed "s@/?@/lab?@g") | curl -o /dev/null -s -w ''%{http_code}'' --config -) == ''200'' ]'
+      stop_command: jupyter lab stop 8888
+      user_msg: ""
+      logfile_path: ""
+      timeout_seconds: 60
+      icon_url: ""
+      webapp_options:
+        autolaunch: true
+        port: "8888"
+        proxy:
+          trim_prefix: false
+        url_command: jupyter lab list | head -n 2 | tail -n 1 | cut -f1 -d' ' | grep -v 'Currently'
     programming_languages:
-      - python3
+    - python3
     icon_url: ""
     image_version: 1.0.0
     os: linux
@@ -51,77 +60,24 @@ environment:
       gid: ""
       username: ""
     package_managers:
-      - name: apt
-        binary_path: /usr/bin/apt
-        installed_packages: []
-      - name: pip
-        binary_path: /usr/bin/pip
-        installed_packages: []
+    - name: apt
+      binary_path: /usr/bin/apt
+      installed_packages: []
+    - name: pip
+      binary_path: /usr/bin/pip
+      installed_packages: []
     package_manager_environment:
       name: ""
       target: ""
-  compose_file_path: docker-compose.complete.yml
 execution:
-  apps:
-    - name: Web UI
-      type: custom
-      class: webapp
-      start_command: cd /project && docker-compose -f docker-compose.complete.yml up -d webui
-      health_check_command: curl -f "http://localhost:3000/" || exit 1
-      stop_command: cd /project && docker-compose -f docker-compose.complete.yml stop webui
-      user_msg: "Access the voice assistant web interface"
-      logfile_path: ""
-      timeout_seconds: 120
-      icon_url: ""
-      webapp_options:
-        autolaunch: true
-        port: "3000"
-        proxy:
-          trim_prefix: false
-        url: http://localhost:3000/
-    - name: vLLM API
-      type: custom
-      class: webapp
-      start_command: ""
-      health_check_command: curl -f "http://localhost:8000/health" || exit 1
-      stop_command: ""
-      user_msg: "OpenAI-compatible API endpoint for the Qwen3-Omni model"
-      logfile_path: ""
-      timeout_seconds: 180
-      icon_url: ""
-      webapp_options:
-        autolaunch: false
-        port: "8000"
-        proxy:
-          trim_prefix: false
-        url: http://localhost:8000/
-    - name: Backend API
-      type: custom
-      class: webapp
-      start_command: ""
-      health_check_command: curl -f "http://localhost:8080/health" || exit 1
-      stop_command: ""
-      user_msg: "Enhanced backend with search and storage capabilities"
-      logfile_path: ""
-      timeout_seconds: 60
-      icon_url: ""
-      webapp_options:
-        autolaunch: false
-        port: "8080"
-        proxy:
-          trim_prefix: false
-        url: http://localhost:8080/
+  apps: []
   resources:
     gpu:
       requested: 1
-    sharedMemoryMB: 2048
-  secrets:
-    - variable: HF_TOKEN
-      description: "Hugging Face token for accessing gated models (optional)"
-    - variable: BRAVE_API_KEY
-      description: "Brave Search API key for internet search (get free at brave.com/search/api)"
+    sharedMemoryMB: 1024
+  secrets: []
   mounts:
-    - type: project
-      target: /project/
-      description: Project directory
-      options: rw
+  - type: project
+    target: /project/
+    description: Project directory
+    options: rw
