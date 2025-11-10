@@ -1,0 +1,55 @@
+# ULTRA-MINIMAL DEPLOYMENT
+# Just the model - nothing else!
+# Perfect if you want to use your own UI/client
+
+version: '3.8'
+
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface
+    ports:
+      - "8000:8000"
+    command: >
+      --model Qwen/Qwen3-Omni-30B-A3B-Instruct
+      --quantization awq
+      --dtype auto
+      --gpu-memory-utilization 0.85
+      --max-model-len 8192
+      --trust-remote-code
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+# That's it! 
+# Start with: docker-compose up -d
+# Access at: http://localhost:8000
+# Use with any OpenAI-compatible client!
+
+# Test with curl:
+# curl http://localhost:8000/v1/chat/completions \
+#   -H "Content-Type: application/json" \
+#   -d '{
+#     "model": "qwen3-omni",
+#     "messages": [{"role": "user", "content": "Hello!"}]
+#   }'
+
+# Or Python:
+# from openai import OpenAI
+# client = OpenAI(
+#     base_url="http://localhost:8000/v1",
+#     api_key="dummy"
+# )
+# response = client.chat.completions.create(
+#     model="qwen3-omni",
+#     messages=[{"role": "user", "content": "Hello!"}]
+# )

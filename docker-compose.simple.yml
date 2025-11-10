@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Use pre-built vLLM container (much faster!)
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: qwen3-omni-vllm
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - HF_TOKEN=${HF_TOKEN}  # Add your Hugging Face token
+    volumes:
+      - ~/.cache/huggingface:/root/.cache/huggingface  # Use host cache
+    ports:
+      - "8000:8000"
+    command: >
+      --model Qwen/Qwen3-Omni-30B-A3B-Instruct
+      --quantization awq
+      --dtype auto
+      --gpu-memory-utilization 0.85
+      --max-model-len 8192
+      --served-model-name qwen3-omni
+      --trust-remote-code
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  # Simple backend - only if you need custom logic
+  # Otherwise, you can directly use vLLM's OpenAI-compatible API!
+  backend:
+    build: ./backend
+    container_name: qwen3-omni-backend
+    depends_on:
+      - vllm
+    environment:
+      - VLLM_API_URL=http://vllm:8000
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  # Optional: Simple web UI using existing tools
+  webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: qwen3-omni-ui
+    depends_on:
+      - vllm
+    ports:
+      - "3000:8080"
+    environment:
+      - OPENAI_API_BASE_URL=http://vllm:8000/v1
+      - OPENAI_API_KEY=dummy  # vLLM doesn't need real key
+    volumes:
+      - open-webui:/app/backend/data
+    restart: unless-stopped
+
+volumes:
+  open-webui:
