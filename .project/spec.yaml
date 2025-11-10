@@ -32,61 +32,13 @@ environment:
       - amd64
       - arm64
     cuda_version: "12.2"
-    description: NVIDIA CUDA 12.2 runtime for running vLLM and docker-compose services
+    description: NVIDIA CUDA 12.2 runtime for running docker-compose multi-container application
     entrypoint_script: ""
     labels:
     - cuda12.2
     - docker-compose
     - vllm
-    apps:
-    - name: Voice Assistant Web UI
-      type: custom
-      class: webapp
-      start_command: cd /project && docker-compose -f docker-compose.complete.yml up -d webui && sleep 10
-      health_check_command: curl -f "http://localhost:3000/" || exit 1
-      stop_command: cd /project && docker-compose -f docker-compose.complete.yml stop webui
-      user_msg: "Voice assistant web interface with chat, voice input/output, and document upload"
-      logfile_path: ""
-      timeout_seconds: 180
-      icon_url: ""
-      webapp_options:
-        autolaunch: true
-        port: "3000"
-        proxy:
-          trim_prefix: false
-        url: http://localhost:3000/
-    - name: vLLM API Server
-      type: custom
-      class: webapp
-      start_command: cd /project && docker-compose -f docker-compose.complete.yml up -d vllm && sleep 30
-      health_check_command: curl -f "http://localhost:8000/health" || exit 1
-      stop_command: cd /project && docker-compose -f docker-compose.complete.yml stop vllm
-      user_msg: "OpenAI-compatible API endpoint for Qwen3-Omni model inference"
-      logfile_path: ""
-      timeout_seconds: 300
-      icon_url: ""
-      webapp_options:
-        autolaunch: true
-        port: "8000"
-        proxy:
-          trim_prefix: false
-        url: http://localhost:8000/docs
-    - name: Backend API
-      type: custom
-      class: webapp
-      start_command: cd /project && docker-compose -f docker-compose.complete.yml up -d backend && sleep 5
-      health_check_command: curl -f "http://localhost:8080/health" || exit 1
-      stop_command: cd /project && docker-compose -f docker-compose.complete.yml stop backend
-      user_msg: "Enhanced backend with internet search and persistent storage"
-      logfile_path: ""
-      timeout_seconds: 120
-      icon_url: ""
-      webapp_options:
-        autolaunch: true
-        port: "8080"
-        proxy:
-          trim_prefix: false
-        url: http://localhost:8080/docs
+    apps: []
     programming_languages:
     - python3
     icon_url: ""
@@ -113,8 +65,57 @@ environment:
     package_manager_environment:
       name: ""
       target: ""
+  compose_file_path: docker-compose.complete.yml
 execution:
-  apps: []
+  apps:
+  - name: Voice Assistant Web UI
+    type: custom
+    class: webapp
+    start_command: ""
+    health_check_command: curl -f "http://localhost:3000/" || exit 1
+    stop_command: ""
+    user_msg: "Access the voice assistant web interface (start via Environment > Compose)"
+    logfile_path: ""
+    timeout_seconds: 60
+    icon_url: ""
+    webapp_options:
+      autolaunch: false
+      port: "3000"
+      proxy:
+        trim_prefix: false
+      url: http://localhost:3000/
+  - name: vLLM API Server
+    type: custom
+    class: webapp
+    start_command: ""
+    health_check_command: curl -f "http://localhost:8000/health" || exit 1
+    stop_command: ""
+    user_msg: "OpenAI-compatible API endpoint (start via Environment > Compose)"
+    logfile_path: ""
+    timeout_seconds: 60
+    icon_url: ""
+    webapp_options:
+      autolaunch: false
+      port: "8000"
+      proxy:
+        trim_prefix: false
+      url: http://localhost:8000/docs
+  - name: Backend API
+    type: custom
+    class: webapp
+    start_command: ""
+    health_check_command: curl -f "http://localhost:8080/health" || exit 1
+    stop_command: ""
+    user_msg: "Enhanced backend with search and storage (start via Environment > Compose)"
+    logfile_path: ""
+    timeout_seconds: 60
+    icon_url: ""
+    webapp_options:
+      autolaunch: false
+      port: "8080"
+      proxy:
+        trim_prefix: false
+      url: http://localhost:8080/docs
   resources:
     gpu:
       requested: 1
@@ -129,7 +130,3 @@ execution:
     target: /project/
     description: Project directory
     options: rw
-  - type: volume
-    target: /var/lib/docker
-    description: Docker storage for containers and images
-    options: ""

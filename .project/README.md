@@ -39,13 +39,25 @@ Required/Optional variables:
 - `BRAVE_API_KEY` (optional) - For internet search
 - `GPU_MEMORY_UTILIZATION` - Adjust GPU memory usage (default: 0.85)
 
-### Applications
+### Multi-Container Application
 
-The spec.yaml defines three applications accessible from the AI Workbench UI:
+This project uses docker-compose to run multiple services:
 
-1. **Web UI** (port 3000) - Main user interface with voice support
-2. **vLLM API** (port 8000) - OpenAI-compatible API endpoint
+1. **vLLM** - Qwen3-Omni model inference server (port 8000)
+2. **Backend** - Enhanced API with search and storage (port 8080)
+3. **Web UI** - Open WebUI for chat interface (port 3000)
+
+Start/stop these services through: **Environment → Compose** in AI Workbench.
+
+### Applications (Endpoints)
+
+The Applications tab shows endpoints to access the running services:
+
+1. **Voice Assistant Web UI** (port 3000) - Main user interface with voice support
+2. **vLLM API Server** (port 8000) - OpenAI-compatible API endpoint
 3. **Backend API** (port 8080) - Search and storage API
+
+These are just endpoint links - you must start the services via Environment → Compose first.
 
 ### Resource Requirements
 
@@ -56,22 +68,26 @@ The spec.yaml defines three applications accessible from the AI Workbench UI:
 
 ### Starting the Project
 
-From AI Workbench:
+**Using AI Workbench (Recommended):**
 
 1. Ensure the environment is built
-2. Click "Start Environment"
-3. Access applications from the Applications tab
-4. The Web UI will auto-launch in your browser
+2. Go to **Environment → Compose**
+3. Click **Start** to launch all services (vLLM, Backend, Web UI)
+4. Go to **Applications** tab to access the service endpoints
+5. Click on "Voice Assistant Web UI" to open the interface
 
-From Command Line (within Workbench terminal):
+**From Command Line:**
 
 ```bash
-# Start all services
-./start-simple.sh
-
-# Or use docker-compose directly
+# From Workbench terminal or local machine
+cd /project
 docker-compose -f docker-compose.complete.yml up -d
+
+# Or use the start script
+./start-simple.sh
 ```
+
+**Important:** The multi-container application is managed through AI Workbench's Compose feature. The Applications tab shows endpoints to the running services, but you must start/stop the services through Environment → Compose.
 
 ### Customization
 
