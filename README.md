@@ -1,371 +1,275 @@
-# Qwen3-Omni Voice Assistant - Simplified & Complete
+# Qwen3-Omni Voice Assistant
 
-## 🎯 Your Questions Answered
+A production-ready voice assistant powered by Qwen3-Omni-30B, optimized for NVIDIA DGX systems and AI Workbench. Features include web-based UI, internet search capabilities, and persistent storage.
 
-### 1. **Can we pull DGX Spark compatible builds more easily?**
+## Features
 
-**YES!** The original setup was too complex. Here's the simplified version:
+- **Voice Interaction**: Full voice input/output support through Open WebUI
+- **Internet Search**: Real-time web search via Brave API
+- **Website Browsing**: Fetch and parse web content
+- **Persistent Storage**: SQLite-based conversation history and notes
+- **Mobile Responsive**: Access from any device
+- **GPU Optimized**: INT4 quantization for efficient memory usage (~15-18GB)
+- **Easy Deployment**: Pre-built containers, one-command setup
 
-#### Original (Complex):
-- Custom PyTorch container
-- Install vLLM at runtime
-- Manual model downloads
-- Multiple build steps
+## Quick Start
 
-#### New (Simple):
-```yaml
-services:
-  vllm:
-    image: vllm/vllm-openai:latest  # Pre-built, ready to go!
-    runtime: nvidia
-    volumes:
-      - ~/.cache/huggingface:/root/.cache/huggingface  # Auto-downloads models
-    command: --model Qwen/Qwen3-Omni-30B-A3B-Instruct ...
-```
+### Prerequisites
 
-**Benefits:**
-- ✅ Pre-built ARM64 compatible images
-- ✅ Models auto-download on first start
-- ✅ No compilation needed
-- ✅ Works out of the box on DGX Spark
+- NVIDIA GPU with 16GB+ VRAM
+- Docker with NVIDIA Container Runtime
+- 30GB+ disk space for model
 
----
-
-### 2. **What is the UI for interacting with the model?**
-
-**The original design described a React UI but didn't actually include it!**
-
-#### Available Options:
-
-**Option A: Open WebUI** (Recommended - What I included)
-```yaml
-webui:
-  image: ghcr.io/open-webui/open-webui:main
-  ports:
-    - "3000:8080"
-```
-
-Features:
-- ✅ Voice input/output built-in
-- ✅ Mobile responsive
-- ✅ Document/image upload
-- ✅ Chat history
-- ✅ Multi-user support
-- ✅ No code needed - just works!
-
-**Option B: Build Custom React UI**
-- More work, more control
-- Would need to build frontend/src from scratch
-- The architecture doc describes it but code isn't there
-
-**Option C: Direct API Access**
-- Use curl, Python SDK, or any OpenAI-compatible client
-- Great for integration with other apps
-
----
-
-### 3. **Does the model have internet search and website browsing?**
-
-**NO - The original design did NOT include this!**
-
-But I've added it in the enhanced backend:
-
-#### What I Added:
-
-**Internet Search (via Brave API):**
-```python
-# In backend/main.py
-async def search_brave(query: str):
-    # Searches the internet and returns results
-    # Free API key from brave.com/search/api
-```
-
-**Website Browsing:**
-```python
-async def fetch_url_content(url: str):
-    # Fetches and parses any webpage
-    # Returns clean text content
-```
-
-**How it works:**
-1. User asks a question
-2. Backend detects if search is needed (keywords like "latest", "current", "news")
-3. Searches the internet via Brave API
-4. Adds search results to context
-5. Qwen3-Omni answers using search results
-
-**To enable:**
-```bash
-# Get free API key from: https://brave.com/search/api
-# Add to .env:
-BRAVE_API_KEY=your_key_here
-ENABLE_SEARCH=true
-```
-
----
-
-### 4. **Can it save and retrieve context and notes locally?**
-
-**Partially - Original only had Redis with 1-hour expiry!**
-
-#### What Was There:
-- Redis session storage
-- 1-hour expiration
-- No long-term memory
-
-#### What I Added:
-
-**Persistent SQLite Database:**
-```
-/app/data/qwen_context.db
-├── conversations  # Full chat history
-├── notes         # User notes
-└── context       # Key-value memory
-```
-
-**Features:**
-
-1. **Conversation History:**
-   ```bash
-   GET /api/v1/conversations/{session_id}
-   # Returns entire conversation history
-   # Never expires unless you delete it
-   ```
-
-2. **Notes System:**
-   ```bash
-   POST /api/v1/notes
-   {
-     "title": "Important Info",
-     "content": "Remember this...",
-     "tags": "work,project"
-   }
-   
-   GET /api/v1/notes/search?q=project
-   # Search through all notes
-   ```
-
-3. **Context/Memory:**
-   ```bash
-   POST /api/v1/context
-   {
-     "key": "user_preferences",
-     "value": "Likes technical details",
-     "category": "personality"
-   }
-   
-   # Automatically included in prompts
-   ```
-
-**Storage Location:**
-- Data persists in `./data/` directory
-- SQLite database file
-- Survives container restarts
-- Can backup/restore easily
-
----
-
-## 🚀 Quick Start
-
-### 1. Simple Setup (Recommended)
+### Basic Setup
 
 ```bash
-# Clone or create project directory
-mkdir qwen3-assistant && cd qwen3-assistant
+# Clone repository
+git clone <repository-url>
+cd dgx-voice-assistant
 
-# Copy the files I created:
-# - docker-compose.complete.yml
-# - start-simple.sh
-# - backend/ directory
+# (Optional) Configure environment
+cp .env.example .env
+# Edit .env to add API keys if needed
 
-# Make startup script executable
+# Start all services
 chmod +x start-simple.sh
-
-# (Optional) Edit .env for API keys
-nano .env
-
-# Start everything!
 ./start-simple.sh
 ```
 
-**Access:**
-- Web UI: http://localhost:3000
-- API: http://localhost:8000
-- Backend: http://localhost:8080
+### Access Points
 
-### 2. Minimal Setup (Just the model)
+- **Web UI**: http://localhost:3000
+- **vLLM API**: http://localhost:8000
+- **Backend API**: http://localhost:8080
+
+## Deployment Options
+
+### Complete Setup (Recommended)
+
+All features including UI, search, and storage:
 
 ```bash
-# If you only want the model, no bells and whistles:
-docker run --runtime nvidia --gpus all \
-  -p 8000:8000 \
-  -v ~/.cache/huggingface:/root/.cache/huggingface \
-  vllm/vllm-openai:latest \
-  --model Qwen/Qwen3-Omni-30B-A3B-Instruct \
-  --quantization awq \
-  --trust-remote-code
+docker-compose -f docker-compose.complete.yml up -d
 ```
 
-Then access via OpenAI SDK or curl!
+### Simple Setup
 
----
+Model and basic backend only:
 
-## 📊 Comparison: Original vs Simplified
-
-| Feature | Original Design | Simplified Version |
-|---------|----------------|-------------------|
-| **Complexity** | High (7 services, custom builds) | Low (3-4 services, pre-built) |
-| **UI** | Described but not built | Included (Open WebUI) |
-| **Internet Search** | ❌ Not included | ✅ Included (Brave API) |
-| **Website Browsing** | ❌ Not included | ✅ Included |
-| **Persistent Storage** | ❌ Only 1hr Redis | ✅ SQLite database |
-| **Voice Support** | ❌ Described but not built | ✅ Built-in to UI |
-| **Mobile Support** | ❌ Separate app needed | ✅ Responsive web UI |
-| **Setup Time** | 30-60 minutes | 5-10 minutes |
-| **Code to Write** | React frontend + backend | None (optional backend) |
-
----
-
-## 🎯 What You Get
-
-### With Simplified Setup:
-
-1. **Easy Deployment**
-   - Pre-built containers
-   - Auto-downloading models
-   - One command startup
-
-2. **Full-Featured UI**
-   - Voice input/output
-   - Document upload
-   - Mobile responsive
-   - Chat history
-   - Settings panel
-
-3. **Internet Capabilities** ⭐ NEW
-   - Web search
-   - URL browsing
-   - Real-time information
-
-4. **Persistent Memory** ⭐ NEW
-   - Conversation history
-   - Personal notes
-   - Context storage
-   - Search functionality
-
-5. **Production Ready**
-   - Health checks
-   - Auto-restart
-   - Error handling
-   - Logging
-
----
-
-## 🔧 Configuration
-
-### .env File:
 ```bash
-# Required for private models (optional for public)
+docker-compose -f docker-compose.simple.yml up -d
+```
+
+### Minimal Setup
+
+Just the vLLM model server:
+
+```bash
+docker-compose -f docker-compose.minimal.yml up -d
+```
+
+## Configuration
+
+### Environment Variables
+
+Create a `.env` file:
+
+```bash
+# Optional: For gated Hugging Face models
 HF_TOKEN=your_huggingface_token
 
-# Required for internet search (get free at brave.com/search/api)
+# Optional: For internet search (get free at brave.com/search/api)
 BRAVE_API_KEY=your_brave_api_key
 
 # Auto-generated
 SESSION_SECRET=random_secret_here
 ```
 
-### Resource Usage (DGX Spark):
-- GPU Memory: ~15-18GB (INT4 quantized)
-- System RAM: ~4-6GB
-- Disk: ~30GB (model) + data
-- **Total**: Leaves 110GB+ free on 128GB system
+### Resource Requirements
 
----
+| Component | GPU Memory | System RAM | Disk Space |
+|-----------|-----------|-----------|------------|
+| vLLM Model | 15-18GB | 4-6GB | ~30GB |
+| Backend | - | 512MB | Minimal |
+| Web UI | - | 512MB | ~1GB |
+| **Total** | **15-18GB** | **~6GB** | **~32GB** |
 
-## 📱 Mobile Access
-
-The web UI is mobile responsive! Just:
-1. Get your DGX IP: `hostname -I`
-2. Open on phone: `http://[DGX-IP]:3000`
-3. Works like a native app
-
----
-
-## 🤔 Still Want the Original Complex Setup?
-
-The original setup is good if you need:
-- Custom React UI with specific design
-- Highly customized backend logic
-- NGINX with SSL certificates
-- Multiple frontend frameworks
-- Custom authentication
-
-But for most use cases, the simplified version is better!
-
----
-
-## 📂 File Structure
+## Architecture
 
 ```
-qwen3-assistant/
-├── docker-compose.complete.yml    # Main deployment
-├── start-simple.sh                # Easy startup
-├── .env                           # Configuration
-├── backend/                       # Enhanced backend
+┌─────────────┐
+│   Web UI    │ :3000
+│ (Open WebUI)│
+└──────┬──────┘
+       │
+┌──────▼──────┐     ┌──────────────┐
+│   Backend   │────▶│ Internet/Web │
+│   :8080     │     │   Search     │
+└──────┬──────┘     └──────────────┘
+       │
+┌──────▼──────┐     ┌──────────────┐
+│    vLLM     │────▶│   SQLite     │
+│   :8000     │     │   Database   │
+└─────────────┘     └──────────────┘
+```
+
+## API Usage
+
+### Chat Completion
+
+```python
+import openai
+
+client = openai.OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="sk-dummy"
+)
+
+response = client.chat.completions.create(
+    model="Qwen/Qwen3-Omni-30B-A3B-Instruct",
+    messages=[
+        {"role": "user", "content": "Hello!"}
+    ]
+)
+
+print(response.choices[0].message.content)
+```
+
+### Search & Browse (via Backend)
+
+```bash
+# Search the internet
+curl -X POST http://localhost:8080/api/v1/search \
+  -H "Content-Type: application/json" \
+  -d '{"query": "latest AI news"}'
+
+# Fetch web content
+curl -X POST http://localhost:8080/api/v1/fetch \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://example.com"}'
+```
+
+### Notes & Context
+
+```bash
+# Save a note
+curl -X POST http://localhost:8080/api/v1/notes \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Important Info",
+    "content": "Remember this...",
+    "tags": "work,project"
+  }'
+
+# Search notes
+curl "http://localhost:8080/api/v1/notes/search?q=project"
+```
+
+## Project Structure
+
+```
+dgx-voice-assistant/
+├── .project/                     # AI Workbench configuration
+│   └── spec.yaml
+├── backend/                      # Enhanced backend service
 │   ├── Dockerfile
-│   └── main.py                    # Search + Storage
-└── data/                          # Persistent storage
-    └── qwen_context.db            # SQLite database
+│   └── main.py
+├── data/                         # Persistent storage
+│   └── qwen_context.db
+├── docker-compose.complete.yml   # Full deployment
+├── docker-compose.simple.yml     # Basic deployment
+├── docker-compose.minimal.yml    # Model only
+├── start-simple.sh              # Quick start script
+└── README.md
 ```
 
----
+## Troubleshooting
 
-## 🆘 Troubleshooting
+### Model Download Issues
 
-**Model won't download:**
 ```bash
-# Check Hugging Face token
+# Check vLLM logs
 docker-compose logs vllm
-# If gated model, add HF_TOKEN to .env
+
+# For gated models, ensure HF_TOKEN is set in .env
 ```
 
-**Out of memory:**
+### Out of Memory
+
 ```bash
-# Reduce GPU utilization in docker-compose.yml:
---gpu-memory-utilization 0.75  # Instead of 0.85
+# Reduce GPU memory utilization in docker-compose.yml
+# Change from 0.85 to 0.75 or lower
+--gpu-memory-utilization 0.75
 ```
 
-**Search not working:**
+### Search Not Working
+
 ```bash
-# Add Brave API key to .env
+# Verify Brave API key in .env
 BRAVE_API_KEY=your_key
-# Restart:
+
+# Restart backend
 docker-compose restart backend
 ```
 
-**UI not accessible:**
+### UI Not Accessible
+
 ```bash
-# Check if running:
+# Check service status
 docker-compose ps
-# Check logs:
+
+# View logs
 docker-compose logs webui
 ```
 
----
+## NVIDIA AI Workbench
 
-## 🎉 Summary
+This project is configured as an NVIDIA AI Workbench project. To use with Workbench:
 
-You asked about:
-1. ✅ **Easier builds** - Yes! Use pre-built vLLM image
-2. ✅ **UI** - Included Open WebUI (or build custom)
-3. ✅ **Internet search** - Added via Brave API
-4. ✅ **Local storage** - Added SQLite database
+1. Open NVIDIA AI Workbench
+2. Clone this repository
+3. Workbench will automatically detect the `.project/spec.yaml` configuration
+4. Start the environment from the Workbench UI
 
-**Bottom Line:**
-- Original design was over-engineered
-- Simplified version is faster and has MORE features
-- Everything works out of the box
-- Ready for DGX Spark
+## Development
 
-**Recommendation:** Use the simplified setup unless you have specific needs for custom UI/backend!
+### Adding Custom Features
+
+1. Modify `backend/main.py` for backend changes
+2. Edit `docker-compose.complete.yml` for service configuration
+3. Rebuild and restart:
+
+```bash
+docker-compose down
+docker-compose up --build -d
+```
+
+### Using Custom Models
+
+Edit the vLLM command in `docker-compose.yml`:
+
+```yaml
+command: >
+  --model your/custom-model
+  --quantization awq
+  --trust-remote-code
+```
+
+## License
+
+See [LICENSE](LICENSE) file for details.
+
+## Support
+
+For issues and questions:
+- Review [QUICK-START.md](QUICK-START.md) for common scenarios
+- Check Docker logs: `docker-compose logs [service-name]`
+- Ensure GPU drivers and NVIDIA Container Runtime are properly installed
+
+## Contributing
+
+Contributions are welcome! Please ensure:
+- Code follows existing style
+- Docker images build successfully
+- All services start without errors
+- Documentation is updated
