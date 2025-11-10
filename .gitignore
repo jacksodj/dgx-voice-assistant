@@ -205,3 +205,19 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# DGX Voice Assistant specific
+data/
+*.db
+*.db-journal
+.cache/
+huggingface/
+models/
+*.pth
+*.safetensors
+
+# Docker
+docker-compose.override.yml
+
+# NVIDIA AI Workbench
+.project/configpacks

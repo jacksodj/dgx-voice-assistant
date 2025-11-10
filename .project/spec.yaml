@@ -1,0 +1,125 @@
+specVersion: v2
+specMinorVersion: 2
+
+meta:
+  name: dgx-voice-assistant
+  image: project-dgx-voice-assistant
+  description: Production-ready voice assistant powered by Qwen3-Omni-30B with internet search and persistent storage
+  labels:
+    - llm
+    - voice-assistant
+    - qwen3
+    - vllm
+    - gpu-optimized
+  createdOn: "2025-11-10T00:00:00Z"
+  defaultBranch: main
+
+layout:
+  - path: code/
+    type: code
+    storage: git
+  - path: backend/
+    type: code
+    storage: git
+  - path: data/
+    type: data
+    storage: gitignore
+  - path: .project/
+    type: project
+    storage: git
+
+environment:
+  base:
+    registry: docker.io
+    image: vllm/vllm-openai:latest
+    name: vLLM with Qwen3-Omni
+    supported_architectures:
+      - amd64
+      - arm64
+    cuda_version: "12.2"
+    description: vLLM inference server with Qwen3-Omni-30B-A3B model support
+
+  variables:
+    - variable: HF_TOKEN
+      value: ""
+      description: Hugging Face token for accessing gated models (optional)
+      type: secret
+
+    - variable: BRAVE_API_KEY
+      value: ""
+      description: Brave Search API key for internet search capabilities
+      type: secret
+
+    - variable: VLLM_API_URL
+      value: "http://vllm:8000"
+      description: Internal vLLM API endpoint
+      type: string
+
+    - variable: ENABLE_SEARCH
+      value: "true"
+      description: Enable internet search capabilities
+      type: string
+
+    - variable: GPU_MEMORY_UTILIZATION
+      value: "0.85"
+      description: Fraction of GPU memory to use (0.0-1.0)
+      type: float
+
+  compose:
+    file: docker-compose.complete.yml
+    services:
+      - vllm
+      - backend
+      - webui
+
+execution:
+  apps:
+    - name: Web UI
+      type: custom
+      class: webapp
+      start_command: ""
+      health_check_command: "curl -f http://localhost:3000 || exit 1"
+      stop_command: ""
+      icon_url: ""
+      webapp_options:
+        autolaunch: true
+        port: "3000"
+        proxy:
+          trim_prefix: false
+      user_msg: "Access the voice assistant web interface"
+
+    - name: vLLM API
+      type: custom
+      class: webapp
+      start_command: ""
+      health_check_command: "curl -f http://localhost:8000/health || exit 1"
+      stop_command: ""
+      icon_url: ""
+      webapp_options:
+        autolaunch: false
+        port: "8000"
+        proxy:
+          trim_prefix: false
+      user_msg: "OpenAI-compatible API endpoint for the Qwen3-Omni model"
+
+    - name: Backend API
+      type: custom
+      class: webapp
+      start_command: ""
+      health_check_command: "curl -f http://localhost:8080/health || exit 1"
+      stop_command: ""
+      icon_url: ""
+      webapp_options:
+        autolaunch: false
+        port: "8080"
+        proxy:
+          trim_prefix: false
+      user_msg: "Enhanced backend with search and storage capabilities"
+
+  resources:
+    gpu:
+      required: true
+      count: 1
+      min_memory_gb: 16
+
+    sharedMemoryMB: 2048
