@@ -9,8 +9,9 @@ A production-ready voice assistant powered by Qwen3-Omni-30B, optimized for NVID
 - **Website Browsing**: Fetch and parse web content
 - **Persistent Storage**: SQLite-based conversation history and notes
 - **Mobile Responsive**: Access from any device
-- **GPU Optimized**: INT4 quantization for efficient memory usage (~15-18GB)
+- **GPU Optimized**: AWQ 4-bit quantization for efficient memory usage (~15-18GB)
 - **Easy Deployment**: Pre-built containers, one-command setup
+- **Model**: Qwen3-Omni-30B (AWQ quantized) - multimodal LLM with vision and audio
 
 ## Quick Start
 
@@ -244,16 +245,30 @@ docker-compose down
 docker-compose up --build -d
 ```
 
-### Using Custom Models
+### Using Different Models
 
-Edit the vLLM command in `docker-compose.yml`:
+Edit the vLLM command in `docker-compose.complete.yml`:
 
+**For AWQ-quantized models (current setup):**
 ```yaml
 command: >
-  --model your/custom-model
+  --model cpatonn/Qwen3-Omni-30B-A3B-Instruct-AWQ-4bit
   --quantization awq
   --trust-remote-code
 ```
+
+**For full-precision models (requires more VRAM ~60GB):**
+```yaml
+command: >
+  --model Qwen/Qwen3-Omni-30B-A3B-Instruct
+  --dtype auto
+  --trust-remote-code
+  # Remove --quantization flag for full precision
+```
+
+**For other quantized models:**
+- Find AWQ models on HuggingFace: search "Qwen3 AWQ" or "model-name AWQ"
+- Use FP8 models from Qwen: `Qwen/Qwen3-30B-A3B-FP8`
 
 ## License
 
