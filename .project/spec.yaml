@@ -1,6 +1,5 @@
 specVersion: v2
-specMinorVersion: 1
-
+specMinorVersion: 2
 meta:
   name: dgx-voice-assistant
   image: project-dgx-voice-assistant
@@ -10,23 +9,23 @@ meta:
     - voice-assistant
     - qwen3
     - vllm
-    - gpu-optimized
   createdOn: "2025-11-10T00:00:00Z"
   defaultBranch: main
-
 layout:
+  - path: code/
+    type: code
+    storage: git
   - path: backend/
     type: code
     storage: git
   - path: data/
     type: data
     storage: gitignore
-
 environment:
   base:
     registry: docker.io
     image: vllm/vllm-openai:latest
-    build_timestamp: ""
+    build_timestamp: "20241110000000"
     name: vLLM OpenAI
     supported_architectures:
       - amd64
@@ -36,86 +35,93 @@ environment:
     entrypoint_script: ""
     labels:
       - vllm
-      - cuda12.2
-
-  variables:
-    HF_TOKEN:
-      type: secret
-      description: "Hugging Face token for accessing gated models (optional)"
-      value: ""
-
-    BRAVE_API_KEY:
-      type: secret
-      description: "Brave Search API key for internet search capabilities"
-      value: ""
-
-    VLLM_API_URL:
-      type: string
-      description: "Internal vLLM API endpoint"
-      value: "http://vllm:8000"
-
-    ENABLE_SEARCH:
-      type: string
-      description: "Enable internet search capabilities"
-      value: "true"
-
-    GPU_MEMORY_UTILIZATION:
-      type: string
-      description: "Fraction of GPU memory to use (0.0-1.0)"
-      value: "0.85"
-
-  mounts:
-    - type: project
-      target: /project/
-      description: Project directory
-
+      - cuda12
+      - python3
+    apps: []
+    programming_languages:
+      - python3
+    icon_url: ""
+    image_version: 1.0.0
+    os: linux
+    os_distro: ubuntu
+    os_distro_release: "22.04"
+    schema_version: v2
+    user_info:
+      uid: ""
+      gid: ""
+      username: ""
+    package_managers:
+      - name: apt
+        binary_path: /usr/bin/apt
+        installed_packages: []
+      - name: pip
+        binary_path: /usr/bin/pip
+        installed_packages: []
+    package_manager_environment:
+      name: ""
+      target: ""
+  compose_file_path: docker-compose.complete.yml
+execution:
   apps:
     - name: Web UI
       type: custom
       class: webapp
-      start_command: docker-compose -f /project/docker-compose.complete.yml up webui
-      health_check_command: "curl -f http://localhost:3000 || exit 1"
-      stop_command: docker-compose -f /project/docker-compose.complete.yml stop webui
+      start_command: cd /project && docker-compose -f docker-compose.complete.yml up -d webui
+      health_check_command: curl -f "http://localhost:3000/" || exit 1
+      stop_command: cd /project && docker-compose -f docker-compose.complete.yml stop webui
+      user_msg: "Access the voice assistant web interface"
+      logfile_path: ""
+      timeout_seconds: 120
       icon_url: ""
       webapp_options:
         autolaunch: true
         port: "3000"
         proxy:
           trim_prefix: false
-      user_msg: "Access the voice assistant web interface"
-
+        url: http://localhost:3000/
     - name: vLLM API
       type: custom
       class: webapp
       start_command: ""
-      health_check_command: "curl -f http://localhost:8000/health || exit 1"
+      health_check_command: curl -f "http://localhost:8000/health" || exit 1
       stop_command: ""
+      user_msg: "OpenAI-compatible API endpoint for the Qwen3-Omni model"
+      logfile_path: ""
+      timeout_seconds: 180
       icon_url: ""
       webapp_options:
         autolaunch: false
         port: "8000"
         proxy:
           trim_prefix: false
-      user_msg: "OpenAI-compatible API endpoint for the Qwen3-Omni model"
-
+        url: http://localhost:8000/
     - name: Backend API
       type: custom
       class: webapp
       start_command: ""
-      health_check_command: "curl -f http://localhost:8080/health || exit 1"
+      health_check_command: curl -f "http://localhost:8080/health" || exit 1
       stop_command: ""
+      user_msg: "Enhanced backend with search and storage capabilities"
+      logfile_path: ""
+      timeout_seconds: 60
       icon_url: ""
       webapp_options:
         autolaunch: false
         port: "8080"
         proxy:
           trim_prefix: false
-      user_msg: "Enhanced backend with search and storage capabilities"
-
-execution:
+        url: http://localhost:8080/
   resources:
     gpu:
-      required: true
-      count: 1
-      min_memory_gb: 16
+      requested: 1
     sharedMemoryMB: 2048
+  secrets:
+    - variable: HF_TOKEN
+      description: "Hugging Face token for accessing gated models (optional)"
+    - variable: BRAVE_API_KEY
+      description: "Brave Search API key for internet search (get free at brave.com/search/api)"
+  mounts:
+    - type: project
+      target: /project/
+      description: Project directory
+      options: rw
