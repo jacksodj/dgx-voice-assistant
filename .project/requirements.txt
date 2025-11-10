@@ -1,0 +1,6 @@
+# Minimal Python requirements for AI Workbench base container
+# This container only manages docker-compose services
+# Actual application dependencies are in the docker-compose services
+
+# No additional Python packages needed
+# The services (vLLM, Backend, WebUI) have their own dependencies

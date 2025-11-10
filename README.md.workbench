@@ -1,0 +1,42 @@
+# Using This Project with AI Workbench
+
+This project uses AI Workbench's **multi-container (Compose)** feature to run three services:
+- vLLM for model inference
+- Backend for search/storage  
+- Web UI for user interaction
+
+## Quick Start
+
+1. **Build the environment** (one time)
+   - AI Workbench will build a minimal CUDA runtime container
+   - This container only manages docker-compose - it doesn't run the AI model
+
+2. **Start the services**
+   - Go to: **Environment → Compose**
+   - Click: **Start**
+   - Wait for all services to start (first time takes ~5-10 minutes to download images)
+
+3. **Access the application**
+   - Go to: **Applications** tab
+   - Click: **Voice Assistant Web UI** to open the interface
+
+## Important Notes
+
+- The base container build installs JupyterLab by default (AI Workbench behavior)
+  - You can ignore this - we only use the container for docker-compose management
+  - The actual AI model runs in the vLLM container, not the base container
+  
+- All AI functionality is in the docker-compose services, not the base container
+
+- Start/stop services through: **Environment → Compose** (not Applications tab)
+
+## Troubleshooting
+
+**Services won't start:**
+- Check: Environment → Compose → View Logs
+- Ensure GPU is available
+- Check docker-compose.complete.yml for errors
+
+**Web UI not accessible:**
+- Ensure services are started via Environment → Compose
+- Check that vLLM service started successfully (it downloads ~30GB on first run)
