@@ -1,0 +1,6 @@
+# NVIDIA AI Workbench Config Packs
+# This file tracks one-time automation that has run on the project
+# Format: <configpack-name>:<version>
+
+# Initial setup completed
+postBuild:1.0.0
