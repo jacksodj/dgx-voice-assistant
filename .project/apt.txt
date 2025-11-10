@@ -1,0 +1,10 @@
+# System packages for DGX Voice Assistant
+# One package per line
+
+curl
+git
+docker.io
+docker-compose
+ca-certificates
+gnupg
+lsb-release

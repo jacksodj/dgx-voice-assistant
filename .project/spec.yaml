@@ -3,8 +3,13 @@ specMinorVersion: 2
 meta:
   name: dgx-voice-assistant
   image: project-dgx-voice-assistant
-  description: Production-ready voice assistant powered by Qwen3-Omni-30B
-  labels: []
+  description: Production-ready voice assistant powered by Qwen3-Omni-30B with vLLM inference
+  labels:
+    - llm
+    - voice-assistant
+    - qwen3
+    - vllm
+    - docker-compose
   createdOn: "2025-11-10T00:00:00Z"
   defaultBranch: main
 layout:
@@ -20,33 +25,68 @@ layout:
 environment:
   base:
     registry: nvcr.io
-    image: nvidia/pytorch:24.09-py3
+    image: nvidia/cuda:12.2.0-runtime-ubuntu22.04
     build_timestamp: "20241110000000"
-    name: PyTorch
-    supported_architectures: []
+    name: CUDA Runtime
+    supported_architectures:
+      - amd64
+      - arm64
     cuda_version: "12.2"
-    description: PyTorch base environment with CUDA 12.2
+    description: NVIDIA CUDA 12.2 runtime for running vLLM and docker-compose services
     entrypoint_script: ""
     labels:
     - cuda12.2
-    - pytorch
+    - docker-compose
+    - vllm
     apps:
-    - name: jupyterlab
-      type: jupyterlab
+    - name: Voice Assistant Web UI
+      type: custom
       class: webapp
-      start_command: jupyter lab --allow-root --port 8888 --ip 0.0.0.0 --no-browser --NotebookApp.base_url=\$PROXY_PREFIX --NotebookApp.default_url=/lab --NotebookApp.allow_origin='*'
-      health_check_command: '[ \$(echo url=\$(jupyter lab list | head -n 2 | tail -n 1 | cut -f1 -d'' '' | grep -v ''Currently'' | sed "s@/?@/lab?@g") | curl -o /dev/null -s -w ''%{http_code}'' --config -) == ''200'' ]'
-      stop_command: jupyter lab stop 8888
-      user_msg: ""
+      start_command: cd /project && docker-compose -f docker-compose.complete.yml up -d webui && sleep 10
+      health_check_command: curl -f "http://localhost:3000/" || exit 1
+      stop_command: cd /project && docker-compose -f docker-compose.complete.yml stop webui
+      user_msg: "Voice assistant web interface with chat, voice input/output, and document upload"
       logfile_path: ""
-      timeout_seconds: 60
+      timeout_seconds: 180
       icon_url: ""
       webapp_options:
         autolaunch: true
-        port: "8888"
+        port: "3000"
         proxy:
           trim_prefix: false
-        url_command: jupyter lab list | head -n 2 | tail -n 1 | cut -f1 -d' ' | grep -v 'Currently'
+        url: http://localhost:3000/
+    - name: vLLM API Server
+      type: custom
+      class: webapp
+      start_command: cd /project && docker-compose -f docker-compose.complete.yml up -d vllm && sleep 30
+      health_check_command: curl -f "http://localhost:8000/health" || exit 1
+      stop_command: cd /project && docker-compose -f docker-compose.complete.yml stop vllm
+      user_msg: "OpenAI-compatible API endpoint for Qwen3-Omni model inference"
+      logfile_path: ""
+      timeout_seconds: 300
+      icon_url: ""
+      webapp_options:
+        autolaunch: true
+        port: "8000"
+        proxy:
+          trim_prefix: false
+        url: http://localhost:8000/docs
+    - name: Backend API
+      type: custom
+      class: webapp
+      start_command: cd /project && docker-compose -f docker-compose.complete.yml up -d backend && sleep 5
+      health_check_command: curl -f "http://localhost:8080/health" || exit 1
+      stop_command: cd /project && docker-compose -f docker-compose.complete.yml stop backend
+      user_msg: "Enhanced backend with internet search and persistent storage"
+      logfile_path: ""
+      timeout_seconds: 120
+      icon_url: ""
+      webapp_options:
+        autolaunch: true
+        port: "8080"
+        proxy:
+          trim_prefix: false
+        url: http://localhost:8080/docs
     programming_languages:
     - python3
     icon_url: ""
@@ -62,7 +102,11 @@ environment:
     package_managers:
     - name: apt
       binary_path: /usr/bin/apt
-      installed_packages: []
+      installed_packages:
+      - curl
+      - git
+      - docker.io
+      - docker-compose
     - name: pip
       binary_path: /usr/bin/pip
       installed_packages: []
@@ -74,10 +118,18 @@ execution:
   resources:
     gpu:
       requested: 1
-    sharedMemoryMB: 1024
-  secrets: []
+    sharedMemoryMB: 2048
+  secrets:
+  - variable: HF_TOKEN
+    description: "Hugging Face token for accessing gated models (optional)"
+  - variable: BRAVE_API_KEY
+    description: "Brave Search API key for internet search capabilities"
   mounts:
   - type: project
     target: /project/
     description: Project directory
     options: rw
+  - type: volume
+    target: /var/lib/docker
+    description: Docker storage for containers and images
+    options: ""
