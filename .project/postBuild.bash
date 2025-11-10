@@ -4,18 +4,41 @@
 
 set -e
 
-echo "===== Post-Build Setup for DGX Voice Assistant ====="
+echo "===== DGX Voice Assistant Post-Build Setup ====="
+
+# Ensure docker and docker-compose are available
+echo "Checking Docker installation..."
+if ! command -v docker &> /dev/null; then
+    echo "Installing Docker..."
+    sudo apt-get update
+    sudo apt-get install -y docker.io docker-compose
+else
+    echo "✓ Docker is installed"
+fi
+
+if ! command -v docker-compose &> /dev/null; then
+    echo "Installing docker-compose..."
+    sudo apt-get install -y docker-compose
+else
+    echo "✓ docker-compose is installed"
+fi
+
+# Ensure user can run docker without sudo
+echo "Configuring Docker permissions..."
+sudo usermod -aG docker $USER || true
 
 # Create necessary directories
-echo "Creating data directories..."
-mkdir -p data
-chmod 755 data
+echo "Creating project directories..."
+mkdir -p /project/data
+mkdir -p /project/code
+chmod 755 /project/data /project/code
 
 # Create .env file if it doesn't exist
-if [ ! -f .env ]; then
+if [ ! -f /project/.env ]; then
     echo "Creating .env file from template..."
-    cat > .env << 'EOF'
+    cat > /project/.env << 'EOF'
 # Hugging Face token (optional, for gated models)
+# Get token at: https://huggingface.co/settings/tokens
 HF_TOKEN=
 
 # Brave Search API key (optional, for internet search)
@@ -28,28 +51,45 @@ ENABLE_SEARCH=true
 GPU_MEMORY_UTILIZATION=0.85
 
 # Auto-generated session secret
-SESSION_SECRET=$(openssl rand -hex 32)
+SESSION_SECRET=$(openssl rand -hex 32 2>/dev/null || echo "change-this-to-a-random-secret")
 EOF
-    echo ".env file created. Please edit it to add your API keys."
+    echo "✓ .env file created"
+    echo "  Edit /project/.env to add your API keys"
 else
-    echo ".env file already exists, skipping..."
+    echo "✓ .env file already exists"
 fi
 
 # Set executable permissions on start script
-if [ -f start-simple.sh ]; then
-    chmod +x start-simple.sh
-    echo "Made start-simple.sh executable"
+if [ -f /project/start-simple.sh ]; then
+    chmod +x /project/start-simple.sh
+    echo "✓ Made start-simple.sh executable"
 fi
 
-# Pull Docker images in advance to speed up first run
-echo "Pre-pulling Docker images (this may take a while)..."
-docker pull vllm/vllm-openai:latest || echo "Warning: Could not pull vLLM image"
-docker pull ghcr.io/open-webui/open-webui:main || echo "Warning: Could not pull Open WebUI image"
+# Pre-pull Docker images to speed up first run
+echo ""
+echo "Pre-pulling Docker images (this may take several minutes)..."
+echo "You can skip this by pressing Ctrl+C"
+sleep 2
 
+docker pull vllm/vllm-openai:latest 2>/dev/null || echo "⚠ Could not pull vLLM image (will pull on first run)"
+docker pull ghcr.io/open-webui/open-webui:main 2>/dev/null || echo "⚠ Could not pull Open WebUI image (will pull on first run)"
+
+echo ""
 echo "===== Post-Build Setup Complete ====="
 echo ""
-echo "Next steps:"
-echo "1. Edit .env file to add your API keys (optional)"
-echo "2. Run: ./start-simple.sh"
-echo "3. Access Web UI at: http://localhost:3000"
+echo "Next steps to start the Voice Assistant:"
+echo ""
+echo "1. (Optional) Configure API keys in /project/.env"
+echo "   - HF_TOKEN for gated Hugging Face models"
+echo "   - BRAVE_API_KEY for internet search"
+echo ""
+echo "2. Start the multi-container application:"
+echo "   In AI Workbench: Go to Environment → Compose → Click 'Start'"
+echo ""
+echo "3. Access the services:"
+echo "   - Voice Assistant Web UI: http://localhost:3000"
+echo "   - vLLM API Server: http://localhost:8000"
+echo "   - Backend API: http://localhost:8080"
+echo ""
+echo "   Or use the Applications tab in AI Workbench for quick access"
 echo ""
