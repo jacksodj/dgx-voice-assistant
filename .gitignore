@@ -218,6 +218,3 @@ models/
 
 # Docker
 docker-compose.override.yml
-
-# NVIDIA AI Workbench
-.project/configpacks

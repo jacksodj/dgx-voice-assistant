@@ -1,5 +1,5 @@
 specVersion: v2
-specMinorVersion: 2
+specMinorVersion: 1
 
 meta:
   name: dgx-voice-assistant
@@ -15,71 +15,67 @@ meta:
   defaultBranch: main
 
 layout:
-  - path: code/
-    type: code
-    storage: git
   - path: backend/
     type: code
     storage: git
   - path: data/
     type: data
     storage: gitignore
-  - path: .project/
-    type: project
-    storage: git
 
 environment:
   base:
     registry: docker.io
     image: vllm/vllm-openai:latest
-    name: vLLM with Qwen3-Omni
+    build_timestamp: ""
+    name: vLLM OpenAI
     supported_architectures:
       - amd64
       - arm64
     cuda_version: "12.2"
-    description: vLLM inference server with Qwen3-Omni-30B-A3B model support
+    description: vLLM inference server with OpenAI API compatibility
+    entrypoint_script: ""
+    labels:
+      - vllm
+      - cuda12.2
 
   variables:
-    - variable: HF_TOKEN
-      value: ""
-      description: Hugging Face token for accessing gated models (optional)
+    HF_TOKEN:
       type: secret
-
-    - variable: BRAVE_API_KEY
+      description: "Hugging Face token for accessing gated models (optional)"
       value: ""
-      description: Brave Search API key for internet search capabilities
-      type: secret
 
-    - variable: VLLM_API_URL
+    BRAVE_API_KEY:
+      type: secret
+      description: "Brave Search API key for internet search capabilities"
+      value: ""
+
+    VLLM_API_URL:
+      type: string
+      description: "Internal vLLM API endpoint"
       value: "http://vllm:8000"
-      description: Internal vLLM API endpoint
-      type: string
 
-    - variable: ENABLE_SEARCH
+    ENABLE_SEARCH:
+      type: string
+      description: "Enable internet search capabilities"
       value: "true"
-      description: Enable internet search capabilities
+
+    GPU_MEMORY_UTILIZATION:
       type: string
-
-    - variable: GPU_MEMORY_UTILIZATION
+      description: "Fraction of GPU memory to use (0.0-1.0)"
       value: "0.85"
-      description: Fraction of GPU memory to use (0.0-1.0)
-      type: float
 
-  compose:
-    file: docker-compose.complete.yml
-    services:
-      - vllm
-      - backend
-      - webui
+  mounts:
+    - type: project
+      target: /project/
+      description: Project directory
 
-execution:
   apps:
     - name: Web UI
       type: custom
       class: webapp
-      start_command: ""
+      start_command: docker-compose -f /project/docker-compose.complete.yml up webui
       health_check_command: "curl -f http://localhost:3000 || exit 1"
-      stop_command: ""
+      stop_command: docker-compose -f /project/docker-compose.complete.yml stop webui
       icon_url: ""
       webapp_options:
         autolaunch: true
@@ -116,10 +112,10 @@ execution:
           trim_prefix: false
       user_msg: "Enhanced backend with search and storage capabilities"
 
+execution:
   resources:
     gpu:
       required: true
       count: 1
       min_memory_gb: 16
-
     sharedMemoryMB: 2048
